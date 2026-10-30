@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thumbnail Brief Maker</title>
+<style>
+  :root {
+    --bg: #f6f6f5;
+    --surface: #ffffff;
+    --surface-2: #efefed;
+    --border: #dcdcd9;
+    --text: #1a1a1a;
+    --muted: #6b6b68;
+    --accent: #1a1a1a;
+    --accent-text: #ffffff;
+    --warn-bg: #f3efe4;
+    --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514;
+      --surface: #1e1e1d;
+      --surface-2: #272726;
+      --border: #3a3a38;
+      --text: #ececea;
+      --muted: #9a9a96;
+      --accent: #ececea;
+      --accent-text: #151514;
+      --warn-bg: #2b2820;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --surface: #1e1e1d; --surface-2: #272726; --border: #3a3a38;
+    --text: #ececea; --muted: #9a9a96; --accent: #ececea; --accent-text: #151514; --warn-bg: #2b2820;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  header.top h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  header.top p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px; max-width: 1200px; margin: 0 auto; padding: 24px;
+  }
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; padding: 16px; }
+    header.top { padding: 14px 16px; }
+  }
+
+  /* ---------- Form ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 {
+    margin: 0 0 14px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted);
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label, .label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; padding: 9px 11px; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  textarea { resize: vertical; min-height: 68px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  .count { float: right; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .count.over { color: var(--text); font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  }
+  .chip:hover { border-color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+  .layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .layout-opt {
+    font: inherit; font-size: 12px; text-align: center; padding: 8px; border-radius: 6px; cursor: pointer;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  }
+  .layout-opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .layout-opt .wf { margin-bottom: 6px; }
+
+  .palette { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .swatch { position: relative; display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 6px 4px 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+  .swatch input[type="color"] { width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 4px; }
+  .swatch code { font-size: 12px; color: var(--muted); }
+  .swatch button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 4px; }
+  .swatch button:hover { color: var(--text); }
+
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  @media (max-width: 520px) { .checks { grid-template-columns: 1fr; } }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0; font-weight: 400; cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+
+  .btn {
+    font: inherit; font-size: 14px; font-weight: 500; padding: 8px 14px; border-radius: 6px; cursor: pointer;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .btn.small { font-size: 12px; padding: 5px 10px; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--text); }
+
+  /* ---------- Preview ---------- */
+  .preview-col { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow: auto; }
+  @media (max-width: 880px) { .preview-col { position: static; max-height: none; } }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .toast { font-size: 12px; color: var(--muted); align-self: center; min-height: 1em; }
+
+  .brief { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .brief .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 4px; }
+  .brief h3.title { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.015em; line-height: 1.25; }
+  .brief .meta { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+  .progress { height: 4px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+  .progress > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+
+  .sec { border-top: 1px solid var(--border); padding: 14px 0; }
+  .sec h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; font-size: 14px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); }
+  .dots { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .dot i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); display: inline-block; }
+
+  .wireframe {
+    position: relative; width: 100%; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin: 6px 0 4px;
+  }
+  .wireframe .box {
+    position: absolute; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--muted); border-radius: 3px;
+  }
+  .box.subject { background: repeating-linear-gradient(135deg, var(--border) 0 6px, transparent 6px 12px); border: 1px dashed var(--muted); }
+  .box.text { background: var(--accent); color: var(--accent-text); font-weight: 700; font-size: 13px; }
+  .box.accent { border: 2px solid var(--accent); color: var(--text); font-weight: 700; }
+  .wf-sm { width: 100%; aspect-ratio: 16/9; position: relative; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .wf-sm .box { font-size: 0; border-radius: 1px; }
+  .caption { font-size: 12px; color: var(--muted); }
+
+  .notes { background: var(--warn-bg); border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px; }
+  .notes ul { margin: 0; padding-left: 18px; }
+  .notes:empty, .notes.hidden { display: none; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 0 32px; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    header.top, .form-col, .toolbar, footer { display: none !important; }
+    .layout { display: block; padding: 0; max-width: none; }
+    .preview-col { position: static; max-height: none; overflow: visible; }
+    .brief { border: 0; padding: 0; }
+    .notes { display: none; }
+    .progress, .progress-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Thumbnail Brief Maker</h1>
+    <p>Fill in the form, get a clear brief for your designer (or yourself).</p>
+  </div>
+  <button class="btn ghost small" id="themeBtn" type="button" aria-label="Toggle light/dark theme">Theme</button>
+</header>
+
+<main class="layout">
+
+  <!-- ===================== FORM ===================== -->
+  <section class="form-col" aria-label="Brief form">
+
+    <div class="card">
+      <h2>1 · Project</h2>
+      <div class="field">
+        <label for="title">Video / content title</label>
+        <input type="text" id="title" data-key="title" placeholder="e.g. I Tried Cooking Only With a Microwave for 7 Days">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="platform">Platform &amp; size</label>
+          <select id="platform" data-key="platform"></select>
+        </div>
+        <div class="field">
+          <label for="variants">Number of variants</label>
+          <input type="number" id="variants" data-key="variants" min="1" max="10" value="1">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="deadline">Deadline</label>
+          <input type="date" id="deadline" data-key="deadline">
+        </div>
+        <div class="field">
+          <label for="owner">Requested by</label>
+          <input type="text" id="owner" data-key="owner" placeholder="Name or team">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 · Strategy</h2>
+      <div class="field">
+        <label for="goal">Goal of the thumbnail</label>
+        <input type="text" id="goal" data-key="goal" placeholder="e.g. Raise click-through rate above 6%">
+      </div>
+      <div class="field">
+        <label for="audience">Target audience</label>
+        <input type="text" id="audience" data-key="audience" placeholder="e.g. Home cooks, 20–35, curious about gadgets">
+      </div>
+      <div class="field">
+        <label for="hook">Core hook / promise <span class="hint">— what makes someone click?</span></label>
+        <textarea id="hook" data-key="hook" placeholder="e.g. Surprise: can a microwave really replace a whole kitchen?"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Content</h2>
+      <div class="field">
+        <label for="headline">Headline text on thumbnail <span class="count" id="headlineCount">0 words</span></label>
+        <input type="text" id="headline" data-key="headline" placeholder="Keep it to 1–4 words, e.g. MICROWAVE ONLY">
+      </div>
+      <div class="field">
+        <label for="subtext">Secondary text <span class="hint">(optional)</span></label>
+        <input type="text" id="subtext" data-key="subtext" placeholder="e.g. Day 7">
+      </div>
+      <div class="field">
+        <label for="subject">Main subject / focal point</label>
+        <textarea id="subject" data-key="subject" placeholder="e.g. Close-up of my shocked face next to a glowing microwave"></textarea>
+      </div>
+      <div class="field">
+        <div class="label">Extra elements</div>
+        <div class="checks" id="elements"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4 · Look &amp; feel</h2>
+      <div class="field">
+        <div class="label">Layout</div>
+        <div class="layouts" id="layouts"></div>
+      </div>
+      <div class="field">
+        <div class="label">Mood <span class="hint">— pick up to 3</span></div>
+        <div class="chips" id="moods"></div>
+      </div>
+      <div class="field">
+        <div class="label">Visual style</div>
+        <div class="chips" id="styles"></div>
+      </div>
+      <div class="field">
+        <div class="label">Colour palette <span class="hint">— 3–4 colours work best</span></div>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div class="field">
+        <label for="typography">Typography direction</label>
+        <select id="typography" data-key="typography">
+          <option value="">No preference</option>
+          <option>Heavy sans-serif, all caps</option>
+          <option>Clean sans-serif, mixed case</option>
+          <option>Condensed bold</option>
+          <option>Serif, editorial</option>
+          <option>Handwritten / marker</option>
+          <option>Match brand font</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5 · Guardrails</h2>
+      <div class="row">
+        <div class="field">
+          <label for="dos">Do</label>
+          <textarea id="dos" data-key="dos" placeholder="One per line"></textarea>
+        </div>
+        <div class="field">
+          <label for="donts">Don't</label>
+          <textarea id="donts" data-key="donts" placeholder="One per line"></textarea>
+        </div>
+      </div>
+      <div class="field">
+        <label for="refs">References <span class="hint">— links or descriptions of thumbnails you like</span></label>
+        <textarea id="refs" data-key="refs" placeholder="One per line"></textarea>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="ab" data-key="ab"> Variants are for A/B testing</label>
+      </div>
+      <div class="field">
+        <label for="notes">Anything else</label>
+        <textarea id="notes" data-key="notes"></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="button" id="resetBtn">Reset form</button>
+    </div>
+  </section>
+
+  <!-- ===================== PREVIEW ===================== -->
+  <aside class="preview-col" aria-label="Brief preview">
+    <div class="toolbar">
+      <button class="btn primary" type="button" id="copyBtn">Copy as Markdown</button>
+      <button class="btn" type="button" id="downloadBtn">Download .md</button>
+      <button class="btn" type="button" id="printBtn">Print / PDF</button>
+      <span class="toast" id="toast" role="status" aria-live="polite"></span>
+    </div>
+    <div class="notes" id="notes-box"></div>
+    <article class="brief" id="brief"></article>
+  </aside>
+
+</main>
+<footer>Your brief is saved automatically in this browser.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Config ---------- */
+  var PLATFORMS = [
+    { id: 'yt',       label: 'YouTube — 1280 × 720 (16:9)',        w: 1280, h: 720 },
+    { id: 'twitch',   label: 'Twitch — 1920 × 1080 (16:9)',        w: 1920, h: 1080 },
+    { id: 'short',    label: 'Shorts / TikTok / Reels — 1080 × 1920 (9:16)', w: 1080, h: 1920 },
+    { id: 'ig45',     label: 'Instagram post — 1080 × 1350 (4:5)', w: 1080, h: 1350 },
+    { id: 'sq',       label: 'Square — 1080 × 1080 (1:1)',         w: 1080, h: 1080 },
+    { id: 'li',       label: 'LinkedIn / Link share — 1200 × 627', w: 1200, h: 627 },
+    { id: 'podcast',  label: 'Podcast cover — 3000 × 3000 (1:1)',  w: 3000, h: 3000 }
+  ];
+
+  var LAYOUTS = [
+    { id: 'left',   label: 'Subject left',   boxes: [['subject',4,8,46,84],['text',54,20,42,60]] },
+    { id: 'right',  label: 'Subject right',  boxes: [['text',4,20,42,60],['subject',50,8,46,84]] },
+    { id: 'center', label: 'Centered',       boxes: [['text',8,5,84,22],['subject',25,30,50,66]] },
+    { id: 'closeup',label: 'Close-up',       boxes: [['subject',30,0,70,100],['text',4,55,50,38]] },
+    { id: 'versus', label: 'Versus',         boxes: [['subject',4,10,40,80],['subject',56,10,40,80],['accent',44,40,12,20]] },
+    { id: 'text',   label: 'Text only',      boxes: [['text',8,25,84,50]] },
+    { id: 'grid',   label: 'Grid',           boxes: [['subject',4,6,44,40],['subject',52,6,44,40],['subject',4,54,44,40],['subject',52,54,44,40]] }
+  ];
+
+  var MOODS  = ['Bold','Curious','Urgent','Calm','Playful','Serious','Luxurious','Minimal','Dramatic','Wholesome'];
+  var STYLES = ['Photo','Illustration','3D render','Flat graphic','Collage','Screenshot-led'];
+  var ELEMENTS = ['Face / expression','Logo / brand mark','Arrow or circle highlight','Before / after','Number or stat','Product shot','Border or frame','Badge / sticker'];
+
+  var DEFAULTS = {
+    title: '', platform: 'yt', variants: 1, deadline: '', owner: '',
+    goal: '', audience: '', hook: '',
+    headline: '', subtext: '', subject: '', elements: [],
+    layout: 'left', moods: [], styles: [],
+    palette: ['#111111', '#f5f5f5', '#8a8a8a'],
+    typography: '', dos: '', donts: '', refs: '', ab: false, notes: ''
+  };
+
+  var STORE_KEY = 'thumb-brief-maker-v1';
+  var state = clone(DEFAULTS);
+
+  /* ---------- Helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function platform() { return PLATFORMS.filter(function (p) { return p.id === state.platform; })[0] || PLATFORMS[0]; }
+  function layout()   { return LAYOUTS.filter(function (l) { return l.id === state.layout; })[0] || LAYOUTS[0]; }
+  function words(s)   { var t = s.trim(); return t ? t.split(/\s+/).length : 0; }
+  function lines(s)   { return s.split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
+  function formatDate(d) {
+    if (!d) return '';
+    var p = d.split('-');
+    if (p.length !== 3) return d;
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) { var s = JSON.parse(raw); state = Object.assign(clone(DEFAULTS), s); }
+    } catch (e) {}
+  }
+
+  /* ---------- Build controls ---------- */
+  function buildPlatforms() {
+    $('platform').innerHTML = PLATFORMS.map(function (p) {
+      return '<option value="' + p.id + '">' + esc(p.label) + '</option>';
+    }).join('');
+  }
+
+  function wireframeHTML(l, cls) {
+    return '<div class="' + cls + '">' + l.boxes.map(function (b) {
+      return '<div class="box ' + b[0] + '" style="left:' + b[1] + '%;top:' + b[2] + '%;width:' + b[3] + '%;height:' + b[4] + '%">' +
+        (cls === 'wireframe' ? labelFor(b[0]) : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  function labelFor(t) { return t === 'subject' ? 'Subject' : t === 'text' ? 'TEXT' : 'VS'; }
+
+  function buildLayouts() {
+    $('layouts').innerHTML = LAYOUTS.map(function (l) {
+      return '<button type="button" class="layout-opt" data-layout="' + l.id + '" aria-pressed="false">' +
+        '<div class="wf">' + wireframeHTML(l, 'wf-sm') + '</div>' + esc(l.label) + '</button>';
+    }).join('');
+    $('layouts').addEventListener('click', function (e) {
+      var b = e.target.closest('.layout-opt');
+      if (!b) return;
+      state.layout = b.getAttribute('data-layout');
+      update();
+    });
+  }
+
+  function buildChips(containerId, items, key, max) {
+    var c = $(containerId);
+    c.innerHTML = items.map(function (m) {
+      return '<button type="button" class="chip" data-v="' + esc(m) + '" aria-pressed="false">' + esc(m) + '</button>';
+    }).join('');
+    c.addEventListener('click', function (e) {
+      var b = e.target.closest('.chip');
+      if (!b) return;
+      var v = b.getAttribute('data-v');
+      var i = state[key].indexOf(v);
+      if (i > -1) state[key].splice(i, 1);
+      else {
+        if (max && state[key].length >= max) state[key].shift();
+        state[key].push(v);
+      }
+      update();
+    });
+  }
+
+  function buildElements() {
+    $('elements').innerHTML = ELEMENTS.map(function (el, i) {
+      return '<label class="check"><input type="checkbox" data-el="' + esc(el) + '"> ' + esc(el) + '</label>';
+    }).join('');
+    $('elements').addEventListener('change', function (e) {
+      var cb = e.target.closest('input[data-el]');
+      if (!cb) return;
+      var v = cb.getAttribute('data-el');
+      var i = state.elements.indexOf(v);
+      if (cb.checked && i === -1) state.elements.push(v);
+      if (!cb.checked && i > -1) state.elements.splice(i, 1);
+      update();
+    });
+  }
+
+  function renderPalette() {
+    var c = $('palette');
+    var html = state.palette.map(function (col, i) {
+      return '<span class="swatch">' +
+        '<input type="color" value="' + esc(col) + '" data-i="' + i + '" aria-label="Colour ' + (i + 1) + '">' +
+        '<code>' + esc(col.toUpperCase()) + '</code>' +
+        '<button type="button" data-rm="' + i + '" aria-label="Remove colour ' + (i + 1) + '">×</button></span>';
+    }).join('');
+    if (state.palette.length < 6) html += '<button type="button" class="btn small" id="addColor">+ Add colour</button>';
+    c.innerHTML = html;
+  }
+
+  function bindPalette() {
+    var c = $('palette');
+    c.addEventListener('input', function (e) {
+      var inp = e.target.closest('input[type="color"]');
+      if (!inp) return;
+      state.palette[+inp.getAttribute('data-i')] = inp.value;
+      var code = inp.parentNode.querySelector('code');
+      if (code) code.textContent = inp.value.toUpperCase();
+      renderBrief(); save();
+    });
+    c.addEventListener('click', function (e) {
+      var rm = e.target.closest('[data-rm]');
+      if (rm) { state.palette.splice(+rm.getAttribute('data-rm'), 1); update(); return; }
+      if (e.target.id === 'addColor') { state.palette.push('#cccccc'); update(); }
+    });
+  }
+
+  /* ---------- Sync form <-> state ---------- */
+  function syncFormFromState() {
+    document.querySelectorAll('[data-key]').forEach(function (el) {
+      var k = el.getAttribute('data-key');
+      if (el.type === 'checkbox') el.checked = !!state[k];
+      else if (document.activeElement !== el) el.value = state[k];
+    });
+    document.querySelectorAll('#elements input').forEach(function (cb) {
+      cb.checked = state.elements.indexOf(cb.getAttribute('data-el')) > -1;
+    });
+    document.querySelectorAll('#moods .chip').forEach(function (b) {
+      b.setAttribute('aria-pressed', state.moods.indexOf(b.getAttribute('data-v')) > -1);
+    });
+    document.querySelectorAll('#styles .chip').forEach(function (b) {
+      b.setAttribute('aria-pressed', state.styles.indexOf(b.getAttribute('data-v')) > -1);
+    });
+    document.querySelectorAll('.layout-opt').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-layout') === state.layout);
+    });
+    renderPalette();
+  }
+
+  function bindInputs() {
+    document.querySelectorAll('[data-key]').forEach(function (el) {
+      var ev = (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'date') ? 'change' : 'input';
+      el.addEventListener(ev, function () {
+        var k = el.getAttribute('data-key');
+        if (el.type === 'checkbox') state[k] = el.checked;
+        else if (el.type === 'number') state[k] = Math.max(1, Math.min(10, parseInt(el.value, 10) || 1));
+        else state[k] = el.value;
+        renderBrief(); updateHeadlineCount(); save();
+      });
+    });
+  }
+
+  function updateHeadlineCount() {
+    var n = words(state.headline);
+    var c = $('headlineCount');
+    c.textContent = n + (n === 1 ? ' word' : ' words');
+    c.className = 'count' + (n > 5 ? ' over' : '');
+  }
+
+  /* ---------- Brief rendering ---------- */
+  function completeness() {
+    var checks = [state.title, state.goal, state.audience, state.hook, state.headline, state.subject,
+                  state.moods.length, state.styles.length];
+    var done = checks.filter(function (x) { return !!x; }).length;
+    return { done: done, total: checks.length };
+  }
+
+  function warnings() {
+    var w = [];
+    var p = platform();
+    if (!state.headline.trim()) w.push('No headline yet. Short text is usually what makes a thumbnail readable.');
+    else if (words(state.headline) > 5) w.push('Headline has more than 5 words. It may be unreadable at small sizes.');
+    if (state.palette.length > 4) w.push('More than 4 colours can feel busy. Consider trimming the palette.');
+    if (state.layout === 'text' && state.elements.indexOf('Face / expression') > -1) w.push('"Text only" layout conflicts with "Face / expression". Pick one.');
+    if (state.layout === 'grid' && words(state.headline) > 3) w.push('Grid layouts leave little room for text. Shorten the headline.');
+    if (p.h > p.w) w.push('Vertical format: keep key content away from the top and bottom edges where app UI overlaps.');
+    if (!state.goal.trim() && !state.hook.trim()) w.push('Add a goal or a hook so the designer knows what to optimise for.');
+    return w;
+  }
+
+  function section(title, inner) {
+    return '<div class="sec"><h4>' + esc(title) + '</h4>' + inner + '</div>';
+  }
+  function kv(pairs) {
+    return '<dl class="kv" style="margin:0">' + pairs.map(function (p) {
+      var val = p[1] ? esc(p[1]) : '<span class="empty">—</span>';
+      return '<dt>' + esc(p[0]) + '</dt><dd>' + val + '</dd>';
+    }).join('') + '</dl>';
+  }
+  function tags(arr) {
+    if (!arr.length) return '<span class="empty">—</span>';
+    return '<div class="tags">' + arr.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>';
+  }
+  function listHTML(arr) {
+    if (!arr.length) return '<span class="empty">—</span>';
+    return '<ul style="margin:0;padding-left:18px">' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function renderBrief() {
+    var p = platform(), l = layout(), c = completeness();
+    var pct = Math.round(c.done / c.total * 100);
+
+    var wf = '<div class="wireframe" style="aspect-ratio:' + p.w + '/' + p.h + ';max-width:' + (p.h > p.w ? '240px' : '100%') + '">' +
+      l.boxes.map(function (b) {
+        var txt = b[0] === 'text' ? (state.headline.trim() ? esc(state.headline.trim().toUpperCase()) : 'TEXT') : labelFor(b[0]);
+        return '<div class="box ' + b[0] + '" style="left:' + b[1] + '%;top:' + b[2] + '%;width:' + b[3] + '%;height:' + b[4] + '%;overflow:hidden;text-align:center;padding:2px">' + txt + '</div>';
+      }).join('') + '</div>' +
+      '<div class="caption">' + esc(l.label) + ' layout · ' + p.w + ' × ' + p.h + ' px</div>';
+
+    var dots = state.palette.length
+      ? '<div class="dots">' + state.palette.map(function (col) {
+          return '<span class="dot"><i style="background:' + esc(col) + '"></i>' + esc(col.toUpperCase()) + '</span>';
+        }).join('') + '</div>'
+      : '<span class="empty">—</span>';
+
+    var html =
+      '<p class="kicker">Thumbnail brief</p>' +
+      '<h3 class="title">' + (state.title.trim() ? esc(state.title.trim()) : '<span class="empty">Untitled project</span>') + '</h3>' +
+      '<p class="meta">' + esc(p.label) +
+        (state.deadline ? ' · Due ' + esc(formatDate(state.deadline)) : '') +
+        (state.owner.trim() ? ' · ' + esc(state.owner.trim()) : '') + '</p>' +
+      '<div class="progress" aria-hidden="true"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="progress-label">' + c.done + ' of ' + c.total + ' key fields completed</div>' +
+
+      section('Strategy', kv([['Goal', state.goal], ['Audience', state.audience], ['Hook', state.hook]])) +
+      section('Content', kv([
+        ['Headline', state.headline.trim()],
+        ['Secondary', state.subtext.trim()],
+        ['Focal point', state.subject.trim()]
+      ]) + '<div style="margin-top:10px">' + tags(state.elements) + '</div>') +
+      section('Layout', wf) +
+      section('Look & feel',
+        kv([['Mood', state.moods.join(', ')], ['Style', state.styles.join(', ')], ['Typography', state.typography]]) +
+        '<div style="margin-top:10px">' + dots + '</div>') +
+      section('Guardrails',
+        '<div class="row"><div><div class="caption" style="margin-bottom:4px">Do</div>' + listHTML(lines(state.dos)) + '</div>' +
+        '<div><div class="caption" style="margin-bottom:4px">Don\'t</div>' + listHTML(lines(state.donts)) + '</div></div>') +
+      section('References', listHTML(lines(state.refs))) +
+      section('Delivery', kv([
+        ['Variants', state.variants + (state.ab ? ' (for A/B testing)' : '')],
+        ['Size', p.w + ' × ' + p.h + ' px'],
+        ['Notes', state.notes.trim()]
+      ]));
+
+    $('brief').innerHTML = html;
+
+    var w = warnings();
+    var box = $('notes-box');
+    if (w.length) {
+      box.className = 'notes';
+      box.innerHTML = '<strong>Quick checks</strong><ul>' + w.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+    } else {
+      box.className = 'notes hidden';
+      box.innerHTML = '';
+    }
+  }
+
+  /* ---------- Export ---------- */
+  function toMarkdown() {
+    var p = platform(), l = layout();
+    var out = [];
+    function line(s) { out.push(s); }
+    function field(k, v) { if (v && String(v).trim()) line('- **' + k + ':** ' + String(v).trim().replace(/\n/g, ' ')); }
+    function bullets(arr) { arr.forEach(function (x) { line('- ' + x); }); }
+
+    line('# Thumbnail brief: ' + (state.title.trim() || 'Untitled project'));
+    line('');
+    field('Platform', p.label);
+    field('Due', formatDate(state.deadline));
+    field('Requested by', state.owner);
+    line('');
+    line('## Strategy');
+    field('Goal', state.goal); field('Audience', state.audience); field('Hook', state.hook);
+    line('');
+    line('## Content');
+    field('Headline', state.headline); field('Secondary text', state.subtext); field('Focal point', state.subject);
+    if (state.elements.length) field('Extra elements', state.elements.join(', '));
+    line('');
+    line('## Layout');
+    line('- ' + l.label + ' (' + p.w + ' × ' + p.h + ' px)');
+    line('');
+    line('## Look & feel');
+    field('Mood', state.moods.join(', ')); field('Style', state.styles.join(', '));
+    field('Typography', state.typography);
+    field('Palette', state.palette.map(function (c) { return c.toUpperCase(); }).join(', '));
+    if (lines(state.dos).length || lines(state.donts).length) {
+      line('');
+      line('## Guardrails');
+      if (lines(state.dos).length) { line('**Do**'); bullets(lines(state.dos)); }
+      if (lines(state.donts).length) { line('**Don\'t**'); bullets(lines(state.donts)); }
+    }
+    if (lines(state.refs).length) { line(''); line('## References'); bullets(lines(state.refs)); }
+    line('');
+    line('## Delivery');
+    field('Variants', state.variants + (state.ab ? ' (for A/B testing)' : ''));
+    field('Notes', state.notes);
+    return out.join('\n') + '\n';
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    setTimeout(function () { if (t.textContent === msg) t.textContent = ''; }, 2200);
+  }
+
+  function copyMarkdown() {
+    var md = toMarkdown();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(md).then(function () { toast('Copied'); }, fallbackCopy);
+    } else fallbackCopy();
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = md; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('Copied'); } catch (e) { toast('Copy failed'); }
+      document.body.removeChild(ta);
+    }
+  }
+
+  function downloadMarkdown() {
+    var name = (state.title.trim() || 'thumbnail-brief').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'thumbnail-brief';
+    var blob = new Blob([toMarkdown()], { type: 'text/markdown' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '.md';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 500);
+    toast('Downloaded');
+  }
+
+  /* ---------- Update cycle ---------- */
+  function update() {
+    syncFormFromState();
+    updateHeadlineCount();
+    renderBrief();
+    save();
+  }
+
+  /* ---------- Theme ---------- */
+  function initTheme() {
+    var btn = $('themeBtn');
+    try {
+      var t = localStorage.getItem('thumb-brief-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+    btn.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      var isDark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('thumb-brief-theme', next); } catch (e) {}
+    });
+  }
+
+  /* ---------- Init ---------- */
+  buildPlatforms();
+  buildLayouts();
+  buildChips('moods', MOODS, 'moods', 3);
+  buildChips('styles', STYLES, 'styles', 0);
+  buildElements();
+  bindPalette();
+  bindInputs();
+  initTheme();
+  load();
+  update();
+
+  $('copyBtn').addEventListener('click', copyMarkdown);
+  $('downloadBtn').addEventListener('click', downloadMarkdown);
+  $('printBtn').addEventListener('click', function () { window.print(); });
+  $('resetBtn').addEventListener('click', function () {
+    if (confirm('Clear the whole form?')) { state = clone(DEFAULTS); update(); toast('Form reset'); }
+  });
+})();
+</script>
+</body>
+</html>
